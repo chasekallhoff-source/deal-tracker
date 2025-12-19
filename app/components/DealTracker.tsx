@@ -27,6 +27,7 @@ interface Deal {
   forecastCategory: string;
   closeDate: string;
   stage: string;
+  previousStage?: string;
   createdAt: string;
   lastContacted: string | null;
   notes: string;
@@ -51,6 +52,7 @@ const dbToApp = (row: any): Deal => ({
   forecastCategory: row.forecast_category,
   closeDate: row.close_date,
   stage: row.stage,
+  previousStage: row.previous_stage,
   createdAt: row.created_at,
   lastContacted: row.last_contacted,
   notes: row.notes || '',
@@ -66,6 +68,7 @@ const appToDb = (deal: Partial<Deal>): any => {
   if (deal.forecastCategory !== undefined) result.forecast_category = deal.forecastCategory;
   if (deal.closeDate !== undefined) result.close_date = deal.closeDate;
   if (deal.stage !== undefined) result.stage = deal.stage;
+  if (deal.previousStage !== undefined) result.previous_stage = deal.previousStage;
   if (deal.createdAt !== undefined) result.created_at = deal.createdAt;
   if (deal.lastContacted !== undefined) result.last_contacted = deal.lastContacted;
   if (deal.notes !== undefined) result.notes = deal.notes;
@@ -99,6 +102,9 @@ const DealTracker = () => {
   const [backupData, setBackupData] = useState('');
   const [showRestore, setShowRestore] = useState(false);
   const [restoreData, setRestoreData] = useState('');
+  const [filterForecast, setFilterForecast] = useState<string>('all');
+  const [filterCloseDate, setFilterCloseDate] = useState<string>('all');
+  const [onHoldSortOrder, setOnHoldSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Load data on mount
   useEffect(() => {
@@ -339,11 +345,11 @@ const DealTracker = () => {
 
       if (fetchError) throw fetchError;
 
-      // Insert into on_hold_deals (without id, let DB generate new one)
+      // Insert into on_hold_deals with previous_stage (without id, let DB generate new one)
       const { id, ...dealWithoutId } = dealData;
       const { data: newOnHoldDeal, error: insertError } = await supabase
         .from('on_hold_deals')
-        .insert([dealWithoutId])
+        .insert([{ ...dealWithoutId, previous_stage: dealData.stage }])
         .select()
         .single();
 
@@ -524,6 +530,49 @@ const DealTracker = () => {
     }
   };
 
+  // Filter deals based on selected filters
+  const getFilteredDeals = (dealsList: Deal[]) => {
+    return dealsList.filter(deal => {
+      // Forecast filter
+      if (filterForecast !== 'all' && deal.forecastCategory !== filterForecast) {
+        return false;
+      }
+
+      // Close date filter
+      if (filterCloseDate !== 'all') {
+        const closeDate = new Date(deal.closeDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(today);
+        endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        const endOfQuarter = new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3 + 3, 0);
+
+        switch (filterCloseDate) {
+          case 'this-week':
+            if (closeDate > endOfWeek) return false;
+            break;
+          case 'this-month':
+            if (closeDate > endOfMonth) return false;
+            break;
+          case 'this-quarter':
+            if (closeDate > endOfQuarter) return false;
+            break;
+          case 'overdue':
+            if (closeDate >= today) return false;
+            break;
+        }
+      }
+
+      return true;
+    });
+  };
+
+  const filteredDeals = getFilteredDeals(deals);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -547,7 +596,7 @@ const DealTracker = () => {
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold text-gray-900">Deal Pipeline</h1>
           <div className="flex gap-2">
             <button
@@ -585,51 +634,151 @@ const DealTracker = () => {
           </div>
         </div>
 
+        {/* Filters */}
+        {view === 'pipeline' && (
+          <div className="flex gap-4 mb-6 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Forecast:</label>
+              <select
+                value={filterForecast}
+                onChange={(e) => setFilterForecast(e.target.value)}
+                className="p-2 border rounded-lg text-gray-900 text-sm"
+              >
+                <option value="all">All Categories</option>
+                {FORECAST_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Close Date:</label>
+              <select
+                value={filterCloseDate}
+                onChange={(e) => setFilterCloseDate(e.target.value)}
+                className="p-2 border rounded-lg text-gray-900 text-sm"
+              >
+                <option value="all">All Dates</option>
+                <option value="overdue">Overdue</option>
+                <option value="this-week">This Week</option>
+                <option value="this-month">This Month</option>
+                <option value="this-quarter">This Quarter</option>
+              </select>
+            </div>
+            {(filterForecast !== 'all' || filterCloseDate !== 'all') && (
+              <button
+                onClick={() => {
+                  setFilterForecast('all');
+                  setFilterCloseDate('all');
+                }}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Clear Filters
+              </button>
+            )}
+            <span className="text-sm text-gray-700 ml-auto">
+              Showing {filteredDeals.length} of {deals.length} deals
+            </span>
+          </div>
+        )}
+
         {/* Pipeline View */}
         {view === 'pipeline' && (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {STAGES.map(stage => (
-              <div key={stage} className="min-w-[280px] bg-white rounded-lg p-4 shadow">
-                <h3 className="font-semibold text-gray-700 mb-3">{stage}</h3>
-                <div className="space-y-3">
-                  {deals.filter(d => d.stage === stage).map(deal => (
-                    <DealCard
-                      key={deal.id}
-                      deal={deal}
-                      onClick={() => {
-                        setSelectedDeal(deal);
-                        setActiveTab('overview');
-                      }}
-                    />
-                  ))}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* Column Headers */}
+            <div className="grid grid-cols-8 border-b bg-gray-50">
+              {STAGES.map(stage => {
+                const stageDeals = filteredDeals.filter(d => d.stage === stage);
+                const stageTotal = stageDeals.reduce((sum, d) => sum + d.value, 0);
+                return (
+                  <div key={stage} className="p-3 border-r last:border-r-0 text-center">
+                    <h3 className="font-semibold text-gray-900 text-sm">{stage}</h3>
+                    <p className="text-xs text-gray-700 mt-1">
+                      {stageDeals.length} deals · ${stageTotal.toLocaleString()}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Column Content */}
+            <div className="grid grid-cols-8 min-h-[500px]">
+              {STAGES.map(stage => (
+                <div key={stage} className="border-r last:border-r-0 p-2 bg-gray-50/50">
+                  <div className="space-y-2">
+                    {filteredDeals.filter(d => d.stage === stage).map(deal => (
+                      <DealRow
+                        key={deal.id}
+                        deal={deal}
+                        onClick={() => {
+                          setSelectedDeal(deal);
+                          setActiveTab('overview');
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
         {/* On Hold View */}
-        {view === 'onhold' && (
-          <div className="bg-white rounded-lg p-6 shadow">
-            <h2 className="text-xl font-semibold mb-4">On Hold Deals</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {onHoldDeals.map(deal => (
-                <DealCard
-                  key={deal.id}
-                  deal={deal}
-                  isOnHold={true}
-                  onClick={() => {
-                    setSelectedDeal(deal);
-                    setActiveTab('overview');
-                  }}
-                />
-              ))}
-              {onHoldDeals.length === 0 && (
-                <p className="text-gray-700 col-span-full">No deals on hold</p>
-              )}
+        {view === 'onhold' && (() => {
+          const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'];
+          const getQuarter = (dateStr: string) => {
+            const month = new Date(dateStr).getMonth();
+            if (month < 3) return 'Q1';
+            if (month < 6) return 'Q2';
+            if (month < 9) return 'Q3';
+            return 'Q4';
+          };
+
+          return (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              {/* Header */}
+              <div className="p-4 border-b">
+                <h2 className="text-xl font-semibold text-gray-900">On Hold Deals ({onHoldDeals.length})</h2>
+                <p className="text-sm text-gray-700 mt-1">Organized by expected close quarter</p>
+              </div>
+              {/* Quarter Headers */}
+              <div className="grid grid-cols-4 border-b bg-yellow-50">
+                {QUARTERS.map(quarter => {
+                  const quarterDeals = onHoldDeals.filter(d => getQuarter(d.closeDate) === quarter);
+                  const quarterTotal = quarterDeals.reduce((sum, d) => sum + d.value, 0);
+                  return (
+                    <div key={quarter} className="p-3 border-r last:border-r-0 text-center">
+                      <h3 className="font-semibold text-gray-900 text-lg">{quarter}</h3>
+                      <p className="text-xs text-gray-700 mt-1">
+                        {quarterDeals.length} deals · ${quarterTotal.toLocaleString()}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Quarter Columns */}
+              <div className="grid grid-cols-4 min-h-[400px]">
+                {QUARTERS.map(quarter => (
+                  <div key={quarter} className="border-r last:border-r-0 p-2 bg-yellow-50/30">
+                    <div className="space-y-2">
+                      {onHoldDeals
+                        .filter(d => getQuarter(d.closeDate) === quarter)
+                        .sort((a, b) => new Date(a.closeDate).getTime() - new Date(b.closeDate).getTime())
+                        .map(deal => (
+                          <OnHoldDealRow
+                            key={deal.id}
+                            deal={deal}
+                            onClick={() => {
+                              setSelectedDeal(deal);
+                              setActiveTab('overview');
+                            }}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Modals */}
         {showNewDeal && (
@@ -756,7 +905,88 @@ const DealTracker = () => {
   );
 };
 
-// Deal Card Component
+// Deal Row Component (for pipeline columns)
+const DealRow = ({ deal, onClick }: { deal: Deal; onClick: () => void }) => {
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(val);
+  };
+
+  const isOverdue = new Date(deal.closeDate) < new Date();
+
+  return (
+    <div
+      onClick={onClick}
+      className="p-2 bg-white rounded border border-gray-200 cursor-pointer hover:border-blue-400 hover:shadow-sm transition-all"
+    >
+      <h4 className="font-medium text-gray-900 text-sm truncate">{deal.companyName}</h4>
+      <div className="flex justify-between items-center mt-1">
+        <span className="text-xs font-semibold text-gray-900">{formatCurrency(deal.value)}</span>
+        <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+          {new Date(deal.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </span>
+      </div>
+      <div className="mt-1">
+        <span className={`text-xs px-1.5 py-0.5 rounded ${
+          deal.forecastCategory === 'Closed Won' ? 'bg-green-100 text-green-800' :
+          deal.forecastCategory === 'Commit' ? 'bg-blue-100 text-blue-800' :
+          deal.forecastCategory === 'Upside' ? 'bg-yellow-100 text-yellow-800' :
+          deal.forecastCategory === 'Best Case' ? 'bg-orange-100 text-orange-800' :
+          'bg-gray-100 text-gray-800'
+        }`}>
+          {deal.forecastCategory}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// On Hold Deal Row Component (for quarterly columns)
+const OnHoldDealRow = ({ deal, onClick }: { deal: Deal; onClick: () => void }) => {
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(val);
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      className="p-2 bg-white rounded border border-yellow-200 cursor-pointer hover:border-yellow-400 hover:shadow-sm transition-all"
+    >
+      <h4 className="font-medium text-gray-900 text-sm truncate">{deal.companyName}</h4>
+      <div className="flex justify-between items-center mt-1">
+        <span className="text-xs font-semibold text-gray-900">{formatCurrency(deal.value)}</span>
+        <span className="text-xs text-gray-600">
+          {new Date(deal.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </span>
+      </div>
+      {deal.previousStage && (
+        <div className="mt-1">
+          <span className="text-xs text-gray-600">Was: {deal.previousStage}</span>
+        </div>
+      )}
+      <div className="mt-1">
+        <span className={`text-xs px-1.5 py-0.5 rounded ${
+          deal.forecastCategory === 'Closed Won' ? 'bg-green-100 text-green-800' :
+          deal.forecastCategory === 'Commit' ? 'bg-blue-100 text-blue-800' :
+          deal.forecastCategory === 'Upside' ? 'bg-yellow-100 text-yellow-800' :
+          deal.forecastCategory === 'Best Case' ? 'bg-orange-100 text-orange-800' :
+          'bg-gray-100 text-gray-800'
+        }`}>
+          {deal.forecastCategory}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// Deal Card Component (kept for potential future use)
 const DealCard = ({ deal, onClick, isOnHold }: { deal: Deal; onClick: () => void; isOnHold?: boolean }) => {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-US', {
