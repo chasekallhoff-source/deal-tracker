@@ -120,7 +120,7 @@ export default function AuthPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Deal Tracker
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-800">
               {isSignUp ? 'Create your account' : 'Sign in to your account'}
             </p>
           </div>
@@ -208,7 +208,7 @@ export default function AuthPage() {
 
           {/* Toggle Sign In / Sign Up */}
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
+            <p className="text-gray-800">
               {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button
                 type="button"
@@ -223,7 +223,7 @@ export default function AuthPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-500 text-sm mt-6">
+        <p className="text-center text-gray-700 text-sm mt-6">
           Manage your sales pipeline efficiently
         </p>
       </div>

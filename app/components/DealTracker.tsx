@@ -529,7 +529,7 @@ const DealTracker = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-          <p className="text-gray-600">Loading deals...</p>
+          <p className="text-gray-800">Loading deals...</p>
         </div>
       </div>
     );
@@ -625,7 +625,7 @@ const DealTracker = () => {
                 />
               ))}
               {onHoldDeals.length === 0 && (
-                <p className="text-gray-500 col-span-full">No deals on hold</p>
+                <p className="text-gray-700 col-span-full">No deals on hold</p>
               )}
             </div>
           </div>
@@ -686,7 +686,7 @@ const DealTracker = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-2xl w-full p-6">
               <h3 className="text-xl font-bold mb-4">Backup Data</h3>
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-gray-800 mb-3">
                 Copy this JSON and save it somewhere safe (Notes app, Google Doc, etc). You can use it to restore your data later.
               </p>
               <textarea
@@ -721,7 +721,7 @@ const DealTracker = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-2xl w-full p-6">
               <h3 className="text-xl font-bold mb-4">Restore from Backup</h3>
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-gray-800 mb-3">
                 Paste your backup JSON here to restore your data. This will replace all current data.
               </p>
               <textarea
@@ -774,19 +774,19 @@ const DealCard = ({ deal, onClick, isOnHold }: { deal: Deal; onClick: () => void
   return (
     <div
       onClick={onClick}
-      className={`p-3 rounded-lg border-2 cursor-pointer hover:shadow-md transition-shadow ${
+      className={`p-3 rounded-lg border-2 cursor-pointer hover:shadow-md transition-shadow text-gray-900 ${
         isOnHold ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white'
       }`}
     >
       <h4 className="font-semibold text-gray-900 mb-2">{deal.companyName}</h4>
       <div className="text-sm space-y-1">
         <div className="flex justify-between">
-          <span className="text-gray-600">Value:</span>
-          <span className="font-medium">{formatCurrency(deal.value)}</span>
+          <span className="text-gray-800">Value:</span>
+          <span className="font-medium text-gray-900">{formatCurrency(deal.value)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-600">Close:</span>
-          <span className="font-medium">{formatDate(deal.closeDate)}</span>
+          <span className="text-gray-800">Close:</span>
+          <span className="font-medium text-gray-900">{formatDate(deal.closeDate)}</span>
         </div>
         <div className="mt-2">
           <span className={`text-xs px-2 py-1 rounded ${
@@ -857,7 +857,7 @@ const NewDealModal = ({ onClose, onSave }: {
               required
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
               placeholder="Acme Corp"
             />
           </div>
@@ -872,7 +872,7 @@ const NewDealModal = ({ onClose, onSave }: {
               min="1"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
               placeholder="50000"
             />
           </div>
@@ -884,7 +884,7 @@ const NewDealModal = ({ onClose, onSave }: {
             <select
               value={forecastCategory}
               onChange={(e) => setForecastCategory(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
             >
               {FORECAST_CATEGORIES.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -901,7 +901,7 @@ const NewDealModal = ({ onClose, onSave }: {
               required
               value={closeDate}
               onChange={(e) => setCloseDate(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
             />
           </div>
 
@@ -926,7 +926,7 @@ const NewDealModal = ({ onClose, onSave }: {
               <select
                 value={stage}
                 onChange={(e) => setStage(e.target.value)}
-                className="w-full p-2 border rounded-lg"
+                className="w-full p-2 border rounded-lg text-gray-900"
               >
                 {STAGES.map(s => (
                   <option key={s} value={s}>{s}</option>
@@ -1006,19 +1006,19 @@ const DealDetailModal = ({
         <div className="p-6 border-b flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{deal.companyName}</h2>
-            <div className="flex gap-4 mt-2 text-sm text-gray-600">
+            <div className="flex gap-4 mt-2 text-sm text-gray-800">
               <span>Value: ${deal.value?.toLocaleString()}</span>
               <span>Close: {new Date(deal.closeDate).toLocaleDateString()}</span>
               <span className="font-medium">{deal.forecastCategory}</span>
             </div>
             {deal.lastContacted && (
-              <div className="mt-1 text-xs text-gray-500 flex items-center gap-1">
+              <div className="mt-1 text-xs text-gray-700 flex items-center gap-1">
                 <Clock size={12} />
                 Last contacted: {formatDateTime(deal.lastContacted)}
               </div>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-800">
             <X size={24} />
           </button>
         </div>
@@ -1033,7 +1033,7 @@ const DealDetailModal = ({
                 className={`px-4 py-3 font-medium capitalize ${
                   activeTab === tab
                     ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    : 'text-gray-800 hover:text-gray-900'
                 }`}
               >
                 {tab}
@@ -1114,10 +1114,10 @@ const OverviewTab = ({ deal, isOnHold, onUpdate, onMoveStage, onMoveFromOnHold, 
           <label className="block text-sm font-medium text-gray-700 mb-1">Stage</label>
           {isOnHold ? (
             <div>
-              <p className="text-sm text-gray-600 mb-2">Currently On Hold</p>
+              <p className="text-sm text-gray-800 mb-2">Currently On Hold</p>
               <select
                 onChange={(e) => e.target.value && onMoveFromOnHold(e.target.value)}
-                className="w-full p-2 border rounded-lg"
+                className="w-full p-2 border rounded-lg text-gray-900"
                 defaultValue=""
               >
                 <option value="" disabled>Move to stage...</option>
@@ -1130,7 +1130,7 @@ const OverviewTab = ({ deal, isOnHold, onUpdate, onMoveStage, onMoveFromOnHold, 
             <select
               value={deal.stage}
               onChange={(e) => onMoveStage(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
             >
               {STAGES.map(stage => (
                 <option key={stage} value={stage}>{stage}</option>
@@ -1144,7 +1144,7 @@ const OverviewTab = ({ deal, isOnHold, onUpdate, onMoveStage, onMoveFromOnHold, 
           <select
             value={deal.forecastCategory}
             onChange={(e) => onUpdate({ forecastCategory: e.target.value })}
-            className="w-full p-2 border rounded-lg"
+            className="w-full p-2 border rounded-lg text-gray-900"
           >
             {FORECAST_CATEGORIES.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
@@ -1158,7 +1158,7 @@ const OverviewTab = ({ deal, isOnHold, onUpdate, onMoveStage, onMoveFromOnHold, 
             type="number"
             value={deal.value}
             onChange={(e) => onUpdate({ value: parseInt(e.target.value) || 0 })}
-            className="w-full p-2 border rounded-lg"
+            className="w-full p-2 border rounded-lg text-gray-900"
           />
         </div>
 
@@ -1168,7 +1168,7 @@ const OverviewTab = ({ deal, isOnHold, onUpdate, onMoveStage, onMoveFromOnHold, 
             type="date"
             value={deal.closeDate?.split('T')[0] || ''}
             onChange={(e) => onUpdate({ closeDate: e.target.value })}
-            className="w-full p-2 border rounded-lg"
+            className="w-full p-2 border rounded-lg text-gray-900"
           />
         </div>
       </div>
@@ -1279,7 +1279,7 @@ const StakeholdersTab = ({
           />
         ))}
         {stakeholders.length === 0 && (
-          <p className="text-gray-500">No stakeholders added yet.</p>
+          <p className="text-gray-700">No stakeholders added yet.</p>
         )}
       </div>
 
@@ -1322,14 +1322,14 @@ const StakeholderCard = ({ stakeholder, onUpdateStatus, onDelete }: {
       <div className="flex justify-between items-start mb-3">
         <div>
           <h4 className="font-medium text-gray-900">{stakeholder.name}</h4>
-          <p className="text-sm text-gray-600">{stakeholder.title}</p>
+          <p className="text-sm text-gray-800">{stakeholder.title}</p>
           {stakeholder.email && (
-            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+            <p className="text-sm text-gray-700 flex items-center gap-1 mt-1">
               <Mail size={12} /> {stakeholder.email}
             </p>
           )}
           {stakeholder.phone && (
-            <p className="text-sm text-gray-500 flex items-center gap-1">
+            <p className="text-sm text-gray-700 flex items-center gap-1">
               <Phone size={12} /> {stakeholder.phone}
             </p>
           )}
@@ -1394,7 +1394,7 @@ const AddStakeholderModal = ({ onClose, onSave }: {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
             />
           </div>
           <div>
@@ -1404,7 +1404,7 @@ const AddStakeholderModal = ({ onClose, onSave }: {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
             />
           </div>
           <div>
@@ -1413,7 +1413,7 @@ const AddStakeholderModal = ({ onClose, onSave }: {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
             />
           </div>
           <div>
@@ -1422,7 +1422,7 @@ const AddStakeholderModal = ({ onClose, onSave }: {
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              className="w-full p-2 border rounded-lg text-gray-900"
             />
           </div>
           <div className="flex gap-3 pt-4">
@@ -1473,7 +1473,7 @@ const NurturesTab = ({ nurtures, nurturesSent, onMarkNurtureSent }: {
                 <div>
                   <h4 className="font-medium text-gray-900">{nurture.name}</h4>
                   {sentDate && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-700 mt-1">
                       Sent: {new Date(sentDate).toLocaleDateString()}
                     </p>
                   )}
@@ -1481,7 +1481,7 @@ const NurturesTab = ({ nurtures, nurturesSent, onMarkNurtureSent }: {
               </div>
             </div>
             {nurture.content && (
-              <p className="text-sm text-gray-600 ml-8 whitespace-pre-wrap">{nurture.content}</p>
+              <p className="text-sm text-gray-800 ml-8 whitespace-pre-wrap">{nurture.content}</p>
             )}
           </div>
         );
@@ -1517,7 +1517,7 @@ const SettingsModal = ({ nurtures, onClose, onAddNurture, onDeleteNurture }: {
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
         <div className="p-6 border-b flex justify-between items-center">
           <h3 className="text-xl font-bold">Settings - Nurture Emails</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-800">
             <X size={24} />
           </button>
         </div>
@@ -1540,7 +1540,7 @@ const SettingsModal = ({ nurtures, onClose, onAddNurture, onDeleteNurture }: {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
+                    className="w-full p-2 border rounded-lg text-gray-900"
                     placeholder="e.g., Introduction Email"
                   />
                 </div>
@@ -1589,7 +1589,7 @@ const SettingsModal = ({ nurtures, onClose, onAddNurture, onDeleteNurture }: {
                   </button>
                 </div>
                 {nurture.content && (
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{nurture.content}</p>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{nurture.content}</p>
                 )}
               </div>
             ))}
@@ -1610,7 +1610,7 @@ const LostConfirmModal = ({ onMoveToOnHold, onMarkLost, onCancel }: {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold mb-4">Mark Deal as Lost?</h3>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-800 mb-6">
           Would you like to move this deal to &quot;On Hold&quot; instead? You can nurture it and bring it back later.
         </p>
         <div className="flex gap-3">
