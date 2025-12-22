@@ -271,57 +271,29 @@ const DealTracker = () => {
     }
   };
 
-  const updateDeal = async (dealId: number, updates: Partial<Deal>) => {
+  const updateDeal = async (dealId: number, updates: Partial<Deal>, isOnHold: boolean = false) => {
     setIsSaving(true);
     try {
       const dbUpdates = appToDb(updates);
+      const table = isOnHold ? 'on_hold_deals' : 'deals';
 
-      // Try updating in deals table first
-      const { data: dealData, error: dealError } = await supabase
-        .from('deals')
+      const { data, error } = await supabase
+        .from(table)
         .update(dbUpdates)
         .eq('id', dealId)
         .select()
         .single();
 
-      if (dealError && dealError.code !== 'PGRST116') {
-        // If not "no rows returned" error, try on_hold_deals
-        const { data: onHoldData, error: onHoldError } = await supabase
-          .from('on_hold_deals')
-          .update(dbUpdates)
-          .eq('id', dealId)
-          .select()
-          .single();
+      if (error) throw error;
 
-        if (onHoldError) throw onHoldError;
-
-        const updatedDeal = dbToApp(onHoldData);
+      const updatedDeal = dbToApp(data);
+      if (isOnHold) {
         setOnHoldDeals(prev => prev.map(d => d.id === dealId ? updatedDeal : d));
-        if (selectedDeal?.id === dealId) {
-          setSelectedDeal(updatedDeal);
-        }
-      } else if (dealData) {
-        const updatedDeal = dbToApp(dealData);
-        setDeals(prev => prev.map(d => d.id === dealId ? updatedDeal : d));
-        if (selectedDeal?.id === dealId) {
-          setSelectedDeal(updatedDeal);
-        }
       } else {
-        // Try on_hold_deals if deals table returned no rows
-        const { data: onHoldData, error: onHoldError } = await supabase
-          .from('on_hold_deals')
-          .update(dbUpdates)
-          .eq('id', dealId)
-          .select()
-          .single();
-
-        if (onHoldError) throw onHoldError;
-
-        const updatedDeal = dbToApp(onHoldData);
-        setOnHoldDeals(prev => prev.map(d => d.id === dealId ? updatedDeal : d));
-        if (selectedDeal?.id === dealId) {
-          setSelectedDeal(updatedDeal);
-        }
+        setDeals(prev => prev.map(d => d.id === dealId ? updatedDeal : d));
+      }
+      if (selectedDeal?.id === dealId) {
+        setSelectedDeal(updatedDeal);
       }
     } catch (error: any) {
       toast.error(`Failed to update deal: ${error.message}`);
@@ -389,11 +361,11 @@ const DealTracker = () => {
 
       if (fetchError) throw fetchError;
 
-      // Insert into deals with new stage (without id, let DB generate new one)
-      const { id, ...dealWithoutId } = dealData;
+      // Insert into deals with new stage (without id and previous_stage, as deals table doesn't have previous_stage)
+      const { id, previous_stage, ...dealWithoutIdAndPreviousStage } = dealData;
       const { data: newDeal, error: insertError } = await supabase
         .from('deals')
-        .insert([{ ...dealWithoutId, stage }])
+        .insert([{ ...dealWithoutIdAndPreviousStage, stage }])
         .select()
         .single();
 
@@ -438,11 +410,12 @@ const DealTracker = () => {
   };
 
   const moveStage = (dealId: number, newStage: string) => {
-    updateDeal(dealId, { stage: newStage });
+    updateDeal(dealId, { stage: newStage }, false);
   };
 
-  const addStakeholder = (dealId: number, stakeholderData: Omit<Stakeholder, 'id' | 'engagementStatus'>) => {
-    const deal = [...deals, ...onHoldDeals].find(d => d.id === dealId);
+  const addStakeholder = (dealId: number, stakeholderData: Omit<Stakeholder, 'id' | 'engagementStatus'>, isOnHold: boolean) => {
+    const dealList = isOnHold ? onHoldDeals : deals;
+    const deal = dealList.find(d => d.id === dealId);
     if (!deal) return;
 
     const newStakeholder: Stakeholder = {
@@ -452,29 +425,32 @@ const DealTracker = () => {
     };
 
     const newStakeholders = [...(deal.stakeholders || []), newStakeholder];
-    updateDeal(dealId, { stakeholders: newStakeholders });
+    updateDeal(dealId, { stakeholders: newStakeholders }, isOnHold);
   };
 
-  const updateStakeholder = (dealId: number, stakeholderId: number, updates: Partial<Stakeholder>) => {
-    const deal = [...deals, ...onHoldDeals].find(d => d.id === dealId);
+  const updateStakeholder = (dealId: number, stakeholderId: number, updates: Partial<Stakeholder>, isOnHold: boolean) => {
+    const dealList = isOnHold ? onHoldDeals : deals;
+    const deal = dealList.find(d => d.id === dealId);
     if (!deal) return;
 
     const newStakeholders = deal.stakeholders.map(s =>
       s.id === stakeholderId ? { ...s, ...updates } : s
     );
-    updateDeal(dealId, { stakeholders: newStakeholders });
+    updateDeal(dealId, { stakeholders: newStakeholders }, isOnHold);
   };
 
-  const deleteStakeholder = (dealId: number, stakeholderId: number) => {
-    const deal = [...deals, ...onHoldDeals].find(d => d.id === dealId);
+  const deleteStakeholder = (dealId: number, stakeholderId: number, isOnHold: boolean) => {
+    const dealList = isOnHold ? onHoldDeals : deals;
+    const deal = dealList.find(d => d.id === dealId);
     if (!deal) return;
 
     const newStakeholders = deal.stakeholders.filter(s => s.id !== stakeholderId);
-    updateDeal(dealId, { stakeholders: newStakeholders });
+    updateDeal(dealId, { stakeholders: newStakeholders }, isOnHold);
   };
 
-  const markNurtureSent = (dealId: number, nurtureId: number) => {
-    const deal = [...deals, ...onHoldDeals].find(d => d.id === dealId);
+  const markNurtureSent = (dealId: number, nurtureId: number, isOnHold: boolean) => {
+    const dealList = isOnHold ? onHoldDeals : deals;
+    const deal = dealList.find(d => d.id === dealId);
     if (!deal) return;
 
     const updates = {
@@ -484,7 +460,7 @@ const DealTracker = () => {
       },
       lastContacted: new Date().toISOString()
     };
-    updateDeal(dealId, updates);
+    updateDeal(dealId, updates, isOnHold);
   };
 
   const addNurture = async (nurtureData: { name: string; content: string }) => {
@@ -788,25 +764,28 @@ const DealTracker = () => {
           />
         )}
 
-        {selectedDeal && (
-          <DealDetailModal
-            deal={selectedDeal}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onClose={() => setSelectedDeal(null)}
-            onUpdate={(updates) => updateDeal(selectedDeal.id, updates)}
-            onMoveToOnHold={() => setShowLostConfirm(selectedDeal.id)}
-            onMoveFromOnHold={(stage) => moveDealFromOnHold(selectedDeal.id, stage)}
-            onMarkLost={() => deleteDeal(selectedDeal.id)}
-            onMoveStage={(stage) => moveStage(selectedDeal.id, stage)}
-            onAddStakeholder={(stakeholder) => addStakeholder(selectedDeal.id, stakeholder)}
-            onUpdateStakeholder={(stakeholderId, updates) => updateStakeholder(selectedDeal.id, stakeholderId, updates)}
-            onDeleteStakeholder={(stakeholderId) => deleteStakeholder(selectedDeal.id, stakeholderId)}
-            onMarkNurtureSent={(nurtureId) => markNurtureSent(selectedDeal.id, nurtureId)}
-            nurtures={nurtures}
-            isOnHold={!deals.find(d => d.id === selectedDeal.id)}
-          />
-        )}
+        {selectedDeal && (() => {
+          const isOnHold = !deals.find(d => d.id === selectedDeal.id);
+          return (
+            <DealDetailModal
+              deal={selectedDeal}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              onClose={() => setSelectedDeal(null)}
+              onUpdate={(updates) => updateDeal(selectedDeal.id, updates, isOnHold)}
+              onMoveToOnHold={() => setShowLostConfirm(selectedDeal.id)}
+              onMoveFromOnHold={(stage) => moveDealFromOnHold(selectedDeal.id, stage)}
+              onMarkLost={() => deleteDeal(selectedDeal.id)}
+              onMoveStage={(stage) => moveStage(selectedDeal.id, stage)}
+              onAddStakeholder={(stakeholder) => addStakeholder(selectedDeal.id, stakeholder, isOnHold)}
+              onUpdateStakeholder={(stakeholderId, updates) => updateStakeholder(selectedDeal.id, stakeholderId, updates, isOnHold)}
+              onDeleteStakeholder={(stakeholderId) => deleteStakeholder(selectedDeal.id, stakeholderId, isOnHold)}
+              onMarkNurtureSent={(nurtureId) => markNurtureSent(selectedDeal.id, nurtureId, isOnHold)}
+              nurtures={nurtures}
+              isOnHold={isOnHold}
+            />
+          );
+        })()}
 
         {showSettings && (
           <SettingsModal
@@ -1345,6 +1324,11 @@ const OverviewTab = ({ deal, isOnHold, onUpdate, onMoveStage, onMoveFromOnHold, 
           {isOnHold ? (
             <div>
               <p className="text-sm text-gray-800 mb-2">Currently On Hold</p>
+              {deal.previousStage && (
+                <p className="text-sm text-gray-700 mb-2">
+                  Previous Stage: <span className="font-medium text-gray-900">{deal.previousStage}</span>
+                </p>
+              )}
               <select
                 onChange={(e) => e.target.value && onMoveFromOnHold(e.target.value)}
                 className="w-full p-2 border rounded-lg text-gray-900"
