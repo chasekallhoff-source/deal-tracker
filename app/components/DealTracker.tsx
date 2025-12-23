@@ -93,6 +93,7 @@ const DealTracker = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [selectedDealIsOnHold, setSelectedDealIsOnHold] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [view, setView] = useState('pipeline');
   const [showSettings, setShowSettings] = useState(false);
@@ -686,6 +687,7 @@ const DealTracker = () => {
                         deal={deal}
                         onClick={() => {
                           setSelectedDeal(deal);
+                          setSelectedDealIsOnHold(false);
                           setActiveTab('overview');
                         }}
                       />
@@ -744,6 +746,7 @@ const DealTracker = () => {
                             deal={deal}
                             onClick={() => {
                               setSelectedDeal(deal);
+                              setSelectedDealIsOnHold(true);
                               setActiveTab('overview');
                             }}
                           />
@@ -764,28 +767,25 @@ const DealTracker = () => {
           />
         )}
 
-        {selectedDeal && (() => {
-          const isOnHold = !deals.find(d => d.id === selectedDeal.id);
-          return (
-            <DealDetailModal
-              deal={selectedDeal}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              onClose={() => setSelectedDeal(null)}
-              onUpdate={(updates) => updateDeal(selectedDeal.id, updates, isOnHold)}
-              onMoveToOnHold={() => setShowLostConfirm(selectedDeal.id)}
-              onMoveFromOnHold={(stage) => moveDealFromOnHold(selectedDeal.id, stage)}
-              onMarkLost={() => deleteDeal(selectedDeal.id)}
-              onMoveStage={(stage) => moveStage(selectedDeal.id, stage)}
-              onAddStakeholder={(stakeholder) => addStakeholder(selectedDeal.id, stakeholder, isOnHold)}
-              onUpdateStakeholder={(stakeholderId, updates) => updateStakeholder(selectedDeal.id, stakeholderId, updates, isOnHold)}
-              onDeleteStakeholder={(stakeholderId) => deleteStakeholder(selectedDeal.id, stakeholderId, isOnHold)}
-              onMarkNurtureSent={(nurtureId) => markNurtureSent(selectedDeal.id, nurtureId, isOnHold)}
-              nurtures={nurtures}
-              isOnHold={isOnHold}
-            />
-          );
-        })()}
+        {selectedDeal && (
+          <DealDetailModal
+            deal={selectedDeal}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onClose={() => setSelectedDeal(null)}
+            onUpdate={(updates) => updateDeal(selectedDeal.id, updates, selectedDealIsOnHold)}
+            onMoveToOnHold={() => setShowLostConfirm(selectedDeal.id)}
+            onMoveFromOnHold={(stage) => moveDealFromOnHold(selectedDeal.id, stage)}
+            onMarkLost={() => deleteDeal(selectedDeal.id)}
+            onMoveStage={(stage) => moveStage(selectedDeal.id, stage)}
+            onAddStakeholder={(stakeholder) => addStakeholder(selectedDeal.id, stakeholder, selectedDealIsOnHold)}
+            onUpdateStakeholder={(stakeholderId, updates) => updateStakeholder(selectedDeal.id, stakeholderId, updates, selectedDealIsOnHold)}
+            onDeleteStakeholder={(stakeholderId) => deleteStakeholder(selectedDeal.id, stakeholderId, selectedDealIsOnHold)}
+            onMarkNurtureSent={(nurtureId) => markNurtureSent(selectedDeal.id, nurtureId, selectedDealIsOnHold)}
+            nurtures={nurtures}
+            isOnHold={selectedDealIsOnHold}
+          />
+        )}
 
         {showSettings && (
           <SettingsModal
